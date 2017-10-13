@@ -225,10 +225,13 @@ function fileExplorer (appAPI, files) {
       label.setAttribute('contenteditable', true)
       label.classList.add(css.rename)
       label.focus()
+      console.log('set saveFileName' + editModeOff)
+      label.saveFileName = editModeOff // use for browser testing cause the focus/blur events do not work in nightwatch
     }
   }
 
   function editModeOff (event) {
+    console.log('reanme!!!')
     var label = this
     function rename () {
       var newPath = label.dataset.path

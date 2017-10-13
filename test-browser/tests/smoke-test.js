@@ -3,6 +3,7 @@ var init = require('../helpers/init')
 var sauce = require('./sauce')
 
 module.exports = {
+  '@disabled': true,
   before: function (browser, done) {
     browser
     init(browser, done)
