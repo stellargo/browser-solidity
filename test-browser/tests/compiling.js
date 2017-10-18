@@ -101,19 +101,30 @@ function testInputValues (browser, callback) {
  "2": "string: _strret string _ string _  string _  string _  string _  string _  string _  string _  string _  string _"
 }`).testFunction('inputValue2 - transact (not payable)',
         '0x487d09e244853bcb108b3a22cd6ee57b6431e50869619c9b918e9764fc16ef7f',
-        '[vm] from:0xca3...a733c, to:browser/inputValues.sol:test.inputValue2(uint256[3],bytes8[4]) 0x8c1...401f5, value:0 wei, data:0x1b7...00000, 0 logs, hash:0x487...6ef7f',
+        '[vm] from:0xca3...a733c, to:browser/inputValues.sol:test.inputValue2(uint256[3],bytes8[4]) 0x8c1...401f5, value:0 wei, data:0x1b7...00000, 1 logs, hash:0x487...6ef7f',
         {types: 'uint256[3] _n, bytes8[4] _b8', values: `[1,2,3], ["0x1234", "0x1234","0x1234","0x1234"]`},
         `{
  "0": "uint256[3]: _nret 1, 2, 3",
  "1": "bytes8[4]: _b8ret 0x1234000000000000, 0x1234000000000000, 0x1234000000000000, 0x1234000000000000"
-}`)
+}`, `[
+ {
+  "event": "event1",
+  "args": [
+   "-123",
+   "000000000000000000000000000000000000000000000000000000000000007b",
+   "9c22ff5f21f0b81b113e63f7db6da94fedef11b2119b4088b89664fb9a3cb658",
+   "0x00001234",
+   "test _ test _ test _ test test _ test test _ test test _ test test _ test test _ test test _ test "
+  ]
+ }
+]`)
       .perform(() => { callback(null, browser) })
   })
 }
 
 // @TODO test: bytes8[3][] type as input
 
-function testFunction (fnFullName, txHash, log, expectedInput, expectedReturn) {
+function testFunction (fnFullName, txHash, log, expectedInput, expectedReturn, expectedEvent) {
   this.waitForElementPresent('.instance button[title="' + fnFullName + '"]')
   .perform(function (client, done) {
     if (expectedInput) {
@@ -122,10 +133,17 @@ function testFunction (fnFullName, txHash, log, expectedInput, expectedReturn) {
     done()
   })
     .click('.instance button[title="' + fnFullName + '"]')
+    .pause(500)
     .waitForElementPresent('#editor-container div[class^="terminal"] span[id="tx' + txHash + '"]')
     .assert.containsText('#editor-container div[class^="terminal"] span[id="tx' + txHash + '"] span', log)
     .click('#editor-container div[class^="terminal"] span[id="tx' + txHash + '"] button[class^="details"]')
     .assert.containsText('#editor-container div[class^="terminal"] span[id="tx' + txHash + '"] table[class^="txTable"] #decodedoutput', expectedReturn)
+    .perform(function (client, done) {
+      if (expectedEvent) {
+        client.assert.containsText('#editor-container div[class^="terminal"] span[id="tx' + txHash + '"] table[class^="txTable"] #logs', expectedEvent)
+      }
+      done()
+    })
   return this
 }
 
@@ -171,6 +189,7 @@ var sources = [
   }`},
   {'browser/inputValues.sol': `pragma solidity ^0.4.0;
   contract test {
+      event event1(int _i, uint indexed _u, string indexed _str, bytes4 _b, string _notIndexed);
       function inputValue1 (uint _u, int _i, string _str) returns (uint _uret, int _iret, string _strret) {
         _uret = _u;
         _iret = _i;
@@ -179,6 +198,7 @@ var sources = [
       function inputValue2 (uint[3] _n, bytes8[4] _b8) returns (uint[3] _nret, bytes8[4] _b8ret){
           _nret = _n;
           _b8ret = _b8;
+          event1(-123, 123, "test", 0x1234, "test _ test _ test _ test test _ test test _ test test _ test test _ test test _ test test _ test ");
       }
   }`}
 ]
