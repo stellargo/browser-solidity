@@ -1,11 +1,15 @@
 'use strict'
+var deepequal = require('deep-equal')
 
 module.exports = {
   getCompiledContracts: getCompiledContracts,
   testContracts: testContracts,
   addFile: addFile,
   switchFile: switchFile,
-  verifyContract: verifyContract
+  verifyContract: verifyContract,
+  testFunction,
+  checkDebug,
+  goToVMtraceStep
 }
 
 function getCompiledContracts (browser, compiled, callback) {
@@ -53,10 +57,39 @@ function testContracts (browser, fileName, contractCode, compiledContractNames, 
     .perform((client, done) => {
       addFile(browser, fileName, contractCode, done)
     })
-    .pause(5000)
+    .pause(1000)
     .perform(function () {
       verifyContract(browser, compiledContractNames, callback)
     })
+}
+
+function testFunction (fnFullName, txHash, log, expectedInput, expectedReturn, expectedEvent) {
+  // this => browser
+  this.waitForElementPresent('.instance button[title="' + fnFullName + '"]')
+  .perform(function (client, done) {
+    if (expectedInput) {
+      client.setValue('#runTabView input[title="' + expectedInput.types + '"]', expectedInput.values, function () {})
+    }
+    done()
+  })
+    .click('.instance button[title="' + fnFullName + '"]')
+    .pause(500)
+    .waitForElementPresent('#editor-container div[class^="terminal"] span[id="tx' + txHash + '"]')
+    .assert.containsText('#editor-container div[class^="terminal"] span[id="tx' + txHash + '"] span', log)
+    .click('#editor-container div[class^="terminal"] span[id="tx' + txHash + '"] button[class^="details"]')
+    .perform(function (client, done) {
+      if (expectedReturn) {
+        client.assert.containsText('#editor-container div[class^="terminal"] span[id="tx' + txHash + '"] table[class^="txTable"] #decodedoutput', expectedReturn)
+      }
+      done()
+    })
+    .perform(function (client, done) {
+      if (expectedEvent) {
+        client.assert.containsText('#editor-container div[class^="terminal"] span[id="tx' + txHash + '"] table[class^="txTable"] #logs', expectedEvent)
+      }
+      done()
+    })
+  return this
 }
 
 function addFile (browser, name, content, done) {
@@ -86,6 +119,47 @@ function switchFile (browser, name, done) {
   .useCss()
   .pause(2000)
   .perform(function () {
+    done()
+  })
+}
+
+function checkDebug (browser, id, debugValue, done) {
+  // id is soliditylocals or soliditystate
+  browser.execute(function (id) {
+    return document.querySelector('#' + id + ' .dropdownrawcontent').innerText
+  }, [id], function (result) {
+    console.log(id + ' ' + result.value)
+    var value = JSON.parse(result.value)
+    var equal = deepequal(debugValue, value)
+    if (!equal) {
+      browser.assert.fail('checkDebug on ' + id, 'info about error', '')
+    }
+    done()
+  })
+}
+
+function goToVMtraceStep (browser, step, done) {
+  // id is soliditylocals or soliditystate
+  browser.timeoutsAsyncScript(6000000).executeAsync(function (step, done) {
+    var test = 0
+    function checkStep () {
+      if (document.querySelector('#stepdetail').innerHTML.indexOf('vm trace step: ' + step) !== -1) {
+        done(true)
+      } else {
+        test++
+        document.querySelector('#intoforward').click()
+        if (test > 1000) {
+          done(false)
+        }
+        setTimeout(checkStep, 200)
+      }
+    }
+    checkStep()
+  }, [step], function (result) {
+    console.log(result)
+    if (!result.value) {
+      browser.assert.fail('goToVMtraceStep fails', '', '')
+    }
     done()
   })
 }

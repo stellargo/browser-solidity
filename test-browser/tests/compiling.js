@@ -18,7 +18,7 @@ module.exports = {
 }
 
 function runTests (browser) {
-  browser.testFunction = testFunction
+  browser.testFunction = contractHelper.testFunction
   browser
     .waitForElementVisible('.newFile', 10000)
     .click('.compileView')
@@ -94,7 +94,7 @@ function testInputValues (browser, callback) {
       .testFunction('inputValue1 - transact (not payable)',
         '0x917a873d27d105213eaf5461e14780387ccceb66fed574f8432d1963917832ae',
         '[vm] from:0xca3...a733c, to:browser/inputValues.sol:test.inputValue1(uint256,int256,string) 0x8c1...401f5, value:0 wei, data:0xd69...00000, 0 logs, hash:0x917...832ae',
-        {types: `uint256 _u, int256 _i, string _str`, values: `"2343242", "-4324324", "string _ string _  string _  string _  string _  string _  string _  string _  string _  string _"`},
+        {types: 'uint256 _u, int256 _i, string _str', values: '"2343242", "-4324324", "string _ string _  string _  string _  string _  string _  string _  string _  string _  string _"'},
         `{
  "0": "uint256: _uret 2343242",
  "1": "int256: _iret -4324324",
@@ -102,7 +102,7 @@ function testInputValues (browser, callback) {
 }`).testFunction('inputValue2 - transact (not payable)',
         '0x487d09e244853bcb108b3a22cd6ee57b6431e50869619c9b918e9764fc16ef7f',
         '[vm] from:0xca3...a733c, to:browser/inputValues.sol:test.inputValue2(uint256[3],bytes8[4]) 0x8c1...401f5, value:0 wei, data:0x1b7...00000, 1 logs, hash:0x487...6ef7f',
-        {types: 'uint256[3] _n, bytes8[4] _b8', values: `[1,2,3], ["0x1234", "0x1234","0x1234","0x1234"]`},
+        {types: 'uint256[3] _n, bytes8[4] _b8', values: '[1,2,3], ["0x1234", "0x1234","0x1234","0x1234"]'},
         `{
  "0": "uint256[3]: _nret 1, 2, 3",
  "1": "bytes8[4]: _b8ret 0x1234000000000000, 0x1234000000000000, 0x1234000000000000, 0x1234000000000000"
@@ -123,29 +123,6 @@ function testInputValues (browser, callback) {
 }
 
 // @TODO test: bytes8[3][] type as input
-
-function testFunction (fnFullName, txHash, log, expectedInput, expectedReturn, expectedEvent) {
-  this.waitForElementPresent('.instance button[title="' + fnFullName + '"]')
-  .perform(function (client, done) {
-    if (expectedInput) {
-      client.setValue('#runTabView input[title="' + expectedInput.types + '"]', expectedInput.values, function () {})
-    }
-    done()
-  })
-    .click('.instance button[title="' + fnFullName + '"]')
-    .pause(500)
-    .waitForElementPresent('#editor-container div[class^="terminal"] span[id="tx' + txHash + '"]')
-    .assert.containsText('#editor-container div[class^="terminal"] span[id="tx' + txHash + '"] span', log)
-    .click('#editor-container div[class^="terminal"] span[id="tx' + txHash + '"] button[class^="details"]')
-    .assert.containsText('#editor-container div[class^="terminal"] span[id="tx' + txHash + '"] table[class^="txTable"] #decodedoutput', expectedReturn)
-    .perform(function (client, done) {
-      if (expectedEvent) {
-        client.assert.containsText('#editor-container div[class^="terminal"] span[id="tx' + txHash + '"] table[class^="txTable"] #logs', expectedEvent)
-      }
-      done()
-    })
-  return this
-}
 
 var sources = [
   {'browser/Untitled.sol': `pragma solidity ^0.4.0;
